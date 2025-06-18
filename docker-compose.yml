@@ -25,9 +25,9 @@ services:
     container_name: visionsearch-db
     env_file: .env
     environment:
-      POSTGRES_DB: visiondb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWD}
+      POSTGRES_DB: ${DATABASE_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
