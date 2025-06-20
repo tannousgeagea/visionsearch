@@ -61,7 +61,7 @@ class VisionAISearch:
         for name, score in results:
             print(f"  - {name} | Similarity: {score:.4f}")
 
-        return [r[0] for r in results]
+        return results
 
 
 if __name__ == "__main__":
