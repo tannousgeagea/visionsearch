@@ -6,4 +6,4 @@ set -e
 # /bin/bash -c "python3 /home/$user/src/cvision_ops/manage.py create_superuser"
 # /bin/bash -c "python3 /home/$user/src/cvision_ops/manage.py collectstatic --noinput"
 
-sudo -E supervisord -n -c /etc/supervisord.conf
+supervisord -n -c /etc/supervisord.conf

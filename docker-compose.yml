@@ -5,18 +5,25 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        user: ${user}
+        userid: ${userid}
+        group: ${group}
+        groupid: ${groupid}
     image: tannousgeagea/visionsearch:latest
     container_name: visionsearch-core
     env_file: .env
+    ports:
+      - 8000:8000
     volumes:
       - .:/home/appuser/src
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
     depends_on:
       - db
 

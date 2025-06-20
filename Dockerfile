@@ -1,10 +1,5 @@
 FROM pytorch/pytorch:2.7.1-cuda12.6-cudnn9-runtime
 
-# Set environment variables
-ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
 # Maintainer instructions has been deprecated, instead use LABEL
 LABEL maintainer="tannous.geagea@wasteant.com"
 
@@ -16,7 +11,6 @@ ARG user=appuser
 ARG userid=1000
 ARG group=appuser
 ARG groupid=1000
-ARG installation_folder="./installation_files"
 
 # Install other necessary packages and dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -q -y --no-install-recommends \
