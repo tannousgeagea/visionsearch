@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
-from core import VisionAISearch
+from common_utils.aisearch.core import VisionAISearch
 from common_utils.indexing.types import ImageData
 from glob import glob
 import os
@@ -22,7 +22,7 @@ class SearchApp:
             device (str): Device for embedding ("cpu", "cuda").
         """
         self.template = "index3.html"
-        self.searcher = VisionAISearch()
+        self.searcher = VisionAISearch(index_path="/media/faiss.index")
 
         self.images = [
             ImageData(

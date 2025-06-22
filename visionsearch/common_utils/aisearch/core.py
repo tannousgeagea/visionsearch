@@ -2,11 +2,14 @@
 import os
 import logging
 import numpy as np
+from tqdm import tqdm
 from pathlib import Path
 from typing import List, Union, Optional
 from common_utils.indexing.types import ImageData
 from common_utils.embedding import create as create_embedding
 from common_utils.indexing import create as create_index
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 class VisionAISearch:
     def __init__(self, index_path: str= "faiss.index", model_name:str="clip", backend:str="faiss"):
@@ -27,7 +30,8 @@ class VisionAISearch:
         ids= []
         logging.info("Building FAISS index from images...")
 
-        for img in images:
+        pbar = tqdm(images, ncols=100)
+        for img in pbar:
             if img.id in self.asset_ids:
                 continue
 
