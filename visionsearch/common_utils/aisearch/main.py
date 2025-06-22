@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
-from core import VisionAISearch
+from common_utils.aisearch.core import VisionAISearch
 from common_utils.indexing.types import ImageData
 from glob import glob
 import os
@@ -21,7 +21,8 @@ class SearchApp:
             data (str): Directory of indexed images.
             device (str): Device for embedding ("cpu", "cuda").
         """
-        self.searcher = VisionAISearch()
+        self.template = "index3.html"
+        self.searcher = VisionAISearch(index_path="/media/faiss.index")
 
         self.images = [
             ImageData(
@@ -31,6 +32,7 @@ class SearchApp:
         ]
 
         self.searcher.build(images=self.images)
+        self.searcher.save()
         self.app = FastAPI(title="VisionSearch Semantic Image Search")
 
         # Setup templates and static files
@@ -46,15 +48,20 @@ class SearchApp:
 
     async def index(self, request: Request):
         """Render the empty search form."""
-        return self.templates.TemplateResponse("index2.html", {"request": request, "results": []})
+        return self.templates.TemplateResponse(self.template, {"request": request, "results": []})
 
     async def search(self, request: Request, query: str = Form(...)):
         """Handle search query and render results."""
-        results = self.searcher.search(query)
+        results = self.searcher.search(query, k=30)
 
         print(results)
-        images = [os.path.basename(self.images[int(i)].file_path) for i in results]
-        return self.templates.TemplateResponse("index2.html", {"request": request, "results": images, 'query': query})
+        images = [
+            {
+                "path": os.path.basename(self.images[int(i)].file_path),
+                "score": score,
+            } for i, score in results
+            ]
+        return self.templates.TemplateResponse(self.template, {"request": request, "results": images, 'query': query})
 
     def get_app(self):
         """Return FastAPI app instance."""

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VisionSearch</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+        --primary: #6366f1;
+        --primary-dark: #4f46e5;
+        --bg: #f9fafb;
+        --text: #1e293b;
+        --gray: #94a3b8;
+        --white: #ffffff;
+        --radius: 12px;
+    }
+
+    [data-theme="light"] {
+    --bg: #f9fafb;
+    --text: #1e293b;
+    --gray: #64748b;
+    --white: #ffffff;
+    --accent: #e0e7ff;
+    }
+
+    [data-theme="dark"] {
+    --bg: #0f172a;
+    --text: #f1f5f9;
+    --gray: #cbd5e1;
+    --white: #1e293b;
+    --accent: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Inter", sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      transition: background 0.1s ease, color 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0;
+      justify-content: center;
+      margin: auto;
+    }
+
+    /* Header */
+    header {
+      width: 100%;
+      background: var(--white);
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    header span {
+      font-size: 0.9rem;
+      color: var(--gray);
+    }
+
+    /* Main Content */
+    main {
+      width: 100%;
+      padding: 3rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .hero-search {
+      width: 100%;
+      background: var(--white);
+      padding: 2rem;
+      border-radius: var(--radius);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .hero-search h2 {
+      font-size: 1.5rem;
+      text-align: center;
+      color: var(--text);
+    }
+
+    .search-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    input[type="text"] {
+      flex-grow: 1;
+      min-width: 300px;
+      padding: 0.9rem 1.2rem;
+      font-size: 1rem;
+      border: 1px solid #cbd5e1;
+      border-radius: var(--radius);
+      transition: all 0.2s ease;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    }
+
+    button[type="submit"] {
+      background-color: var(--primary);
+      color: var(--white);
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0.9rem 1.5rem;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    button[type="submit"]:hover {
+      background-color: var(--primary-dark);
+    }
+
+    .top-k {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .topk-btn {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      color: var(--text);
+      background-color: var(--bg);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .topk-btn:hover,
+    .topk-btn.active {
+      background: var(--accent);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.5rem;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .card {
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--white);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
+      transition: transform 0.25s ease;
+      position: relative;
+    }
+
+    .card:hover {
+      transform: scale(1.03);
+    }
+
+    .card img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background-color: rgba(99, 102, 241, 0.9); /* primary with transparency */
+        color: white;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.3rem 0.6rem;
+        border-radius: 999px;
+        backdrop-filter: blur(4px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        pointer-events: none;
+        z-index: 2;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(15px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+
+    <script>
+        function filterResults(k) {
+        const cards = document.querySelectorAll(".grid .card");
+        cards.forEach((card, idx) => {
+            card.style.display = idx < k ? "block" : "none";
+        });
+        document.querySelectorAll(".topk-btn").forEach(btn => btn.classList.remove("active"));
+        event.target.classList.add("active");
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+        filterResults(10);
+        });
+    </script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const root = document.documentElement;
+            const toggleBtn = document.getElementById("themeToggle");
+
+            if (!toggleBtn) return;
+
+            function setTheme(theme) {
+            root.setAttribute("data-theme", theme);
+            localStorage.setItem("theme", theme);
+            toggleBtn.textContent = theme === "dark" ? "☀️" : "🌙";
+            }
+
+            toggleBtn.addEventListener("click", () => {
+            const current = root.getAttribute("data-theme");
+            setTheme(current === "light" ? "dark" : "light");
+            });
+
+            const saved = localStorage.getItem("theme") || "light";
+            setTheme(saved);
+        });
+    </script>
+</head>
+
+<body>
+
+  <header>
+    <h1>VisionSearch</h1>
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <span>Semantic image search powered by AI</span>
+        <button id="themeToggle" style="
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            " title="Toggle dark mode"
+        >
+            🌙
+        </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero-search">
+      <h2>Search with natural language</h2>
+      <form method="POST" class="search-form">
+        <input
+          type="text"
+          name="query"
+          placeholder="e.g. surfer riding a wave at sunset"
+          value="{{ query or '' }}"
+          required
+        />
+        <button type="submit">Search</button>
+      </form>
+
+      {% if results %}
+      <div class="top-k">
+        <button type="button" class="topk-btn" onclick="filterResults(5)">Top 5</button>
+        <button type="button" class="topk-btn active" onclick="filterResults(10)">Top 10</button>
+        <button type="button" class="topk-btn" onclick="filterResults(30)">Top 30</button>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="grid">
+      {% for img in results %}
+      <div class="card">
+        <img src="{{ request.url_for('images', path=img.path) }}" alt="Result image" />
+        <div class="badge">{{ "{:.1f}%".format(img.score * 100) }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </main>
+
+</body>
+</html>
