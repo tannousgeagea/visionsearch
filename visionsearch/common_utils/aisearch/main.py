@@ -22,7 +22,7 @@ class SearchApp:
             device (str): Device for embedding ("cpu", "cuda").
         """
         self.template = "index3.html"
-        self.searcher = VisionAISearch(index_path="/media/faiss.index", model_name="perception")
+        self.searcher = VisionAISearch(index_path="/media/faiss.index", model_name="clip")
 
         self.images = [
             ImageData(

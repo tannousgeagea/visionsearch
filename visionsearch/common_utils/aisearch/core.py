@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List, Union, Optional
 from common_utils.indexing.types import ImageData
 from common_utils.embedding.perception_encoder.core import PerceptionEmbedding
-# from common_utils.embedding import create as create_embedding
+from common_utils.embedding import create as create_embedding
 from common_utils.indexing import create as create_index
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -17,7 +17,7 @@ class VisionAISearch:
         self.index_path = index_path
         self.id_map_path = f"{index_path}.ids.npy"
         self.asset_ids: List[int] = []
-        self.embedder = PerceptionEmbedding() # create_embedding(model_name)
+        self.embedder = create_embedding(model_name)
         self.index = create_index(backend=backend, dim=self.embedder.get_embed_dim())
         self._load_if_exists()
 
