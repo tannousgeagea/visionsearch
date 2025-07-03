@@ -1,5 +1,5 @@
 from .clip.core import ClipEmbedding
-from .pe.core import PerceptionEmbedding
+from .perception_encoder.core import PerceptionEmbedding
 from .base import BaseEmbedder
 
 def create(model_name: str) -> BaseEmbedder:
