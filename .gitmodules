@@ -1,0 +1,3 @@
+[submodule "visionsearch/common_utils/perception_models"]
+	path = visionsearch/common_utils/perception_models
+	url = https://github.com/facebookresearch/perception_models.git
