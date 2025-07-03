@@ -9,6 +9,7 @@ from common_utils.embedding.base import BaseEmbedder
 
 class PerceptionEmbedding(BaseEmbedder):
     def __init__(self):
+        "Use smallest weights for model init"
         self.weights = "PE-Core-B16-224"
         self.model = p_encoder.CLIP.from_config(self.weights, pretrained=True)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -17,6 +18,7 @@ class PerceptionEmbedding(BaseEmbedder):
         self.tokenizer = transforms.get_text_tokenizer(self.model.context_length)
        
     def extract_text_feature(self, text: str) -> np.ndarray:
+        "Extract normalized feature embeddings in evaluation mode"
         tokens = self.tokenizer(text).to(self.device)
         with torch.no_grad():
             features = self.model.encode_text(tokens)
@@ -24,6 +26,7 @@ class PerceptionEmbedding(BaseEmbedder):
             return features.cpu().numpy()
     
     def extract_image_feature(self, image) -> np.ndarray:
+        "Extract normalized img embeddings in evaluation mode"
         if isinstance(image, str):
             image = Image.open(image).convert("RGB")
         image_tensor = self.preprocess(image).unsqueeze(0).to(self.device)
