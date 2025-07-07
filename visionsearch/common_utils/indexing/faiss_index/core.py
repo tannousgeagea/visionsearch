@@ -3,7 +3,7 @@ import numpy as np
 from common_utils.indexing.base import BaseIndexer
 
 class FaissIndexer(BaseIndexer):
-    def __init__(self, dim=512):
+    def __init__(self, dim=1024):
         self.index = faiss.IndexFlatIP(dim)
 
     def add(self, vectors: np.ndarray) -> None:

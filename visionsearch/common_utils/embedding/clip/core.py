@@ -27,3 +27,6 @@ class ClipEmbedding(BaseEmbedder):
         tokens = clip.tokenize([text]).to(self.device)
         with torch.no_grad():
             return self.model.encode_text(tokens).cpu().numpy()
+        
+    def get_embed_dim(self):
+        return self.model.text_projection.shape[1]

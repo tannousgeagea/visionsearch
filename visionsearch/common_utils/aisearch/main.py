@@ -22,7 +22,8 @@ class SearchApp:
             device (str): Device for embedding ("cpu", "cuda").
         """
         self.template = "index3.html"
-        self.searcher = VisionAISearch(index_path="/media/faiss.index")
+        model_name = os.getenv('VISIONSEARCH_EMBEDDING_BACKEND', 'clip')
+        self.searcher = VisionAISearch(index_path=f"/media/faiss.{model_name}.index", model_name=model_name)
 
         self.images = [
             ImageData(
