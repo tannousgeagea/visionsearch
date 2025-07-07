@@ -52,10 +52,6 @@ RUN pip3 install clip-anytorch
 RUN pip3 install Pillow
 
 # Perception Encoder PE
-RUN pip3 install torch==2.5.1
-RUN pip3 install torchvision==0.20.1
-RUN pip3 install torchaudio==2.5.1
-RUN pip3 install xformers --index-url https://download.pytorch.org/whl/cu124
 COPY ./visionsearch/common_utils/perception_models/requirements.txt /home/appuser/src/visionsearch/common_utils/perception_models/requirements.txt
 RUN pip3 install --no-cache-dir -r /home/appuser/src/visionsearch/common_utils/perception_models/requirements.txt
 
