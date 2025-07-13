@@ -15,6 +15,7 @@ services:
     env_file: .env
     ports:
       - 8000:8000
+      - 9005:9005
     volumes:
       - .:/home/appuser/src
     # deploy:
