@@ -429,30 +429,8 @@ class GeminiVLM(VLMBase):
                 total_chunks=len(chunks),
                 metadata={"analysis_type": response.analysis_type.value}
             )
-            await asyncio.sleep(0.1)  # Simulate streaming delay    async def analyze_image_stream(self, image_data: bytes, prompt: str) -> AsyncIterator[StreamingVLMResponse]:
-        """Analyze image with streaming response"""
-        if not self.config.enable_streaming:
-            raise VLMConfigurationError("Streaming is not enabled for this configuration")
-        
-        # Gemini supports streaming, but we'll implement a simple version
-        # In practice, you'd use the actual streaming API
-        response = self.analyze_image(image_data, prompt)
-        
-        # Simulate streaming by chunking the response
-        text = response.response_text
-        chunk_size = 50  # Characters per chunk
-        chunks = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
-        
-        for i, chunk in enumerate(chunks):
-            yield StreamingVLMResponse(
-                chunk=chunk,
-                is_complete=(i == len(chunks) - 1),
-                chunk_index=i,
-                total_chunks=len(chunks),
-                metadata={"analysis_type": response.analysis_type.value}
-            )
-            await asyncio.sleep(0.1)  # Simulate streaming delay
-
+            await asyncio.sleep(0.5)  # Simulate streaming delay
+            
     def get_model_info(self) -> Dict[str, Any]:
         """Get information about the model"""
         return {

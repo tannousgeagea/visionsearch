@@ -8,7 +8,9 @@ from fastapi import APIRouter, HTTPException
 from fastapi.routing import APIRoute
 from typing import List
 from pydantic import BaseModel
-from fastapi.responses import JSONResponse
+from typing import AsyncIterator
+import json
+from fastapi.responses import StreamingResponse
 from fastapi import UploadFile, File, Form
 from common_utils.generative_ai.vlm import ModelTypeFactory
 from common_utils.generative_ai.vlm.base import AnalysisType, VLMConfig, VLMResponse
@@ -35,55 +37,29 @@ router = APIRouter(
 )
 
 @router.api_route(
-    "/analyze-image", methods=['POST']
+    "/analyze-image/stream", methods=['POST']
 )
-async def analyze_image_endpoint(
+async def stream_analyze_image(
     file: UploadFile = File(...),
-    provider: str = Form(...),
+    provider: str = File(...),
     model_name: str = Form(...),
-    analysis_type: AnalysisType = Form(default=AnalysisType.SCENE_UNDERSTANDING),
-    prompt: Optional[str] = Form(default=None),
-    detail_level: Optional[str] = Form(default="medium")
+    prompt: str = Form(...)
 ):
     try:
         image_data = await file.read()
         config = VLMConfig(
             api_key=os.getenv('GOOGLE_API_KEY', ''),
-            model_name=model_name
+            model_name=model_name,
+            enable_streaming=True
         )
         vlm = ModelTypeFactory.create_vlm(provider=provider, config=config)
 
-        # Use provided prompt if available, otherwise fall back to describe_scene
-        if prompt:
-            response: VLMResponse = vlm.analyze_image(
-                image_data=image_data,
-                prompt=prompt,
-                analysis_type=analysis_type
-            )
-        else:
-            response: VLMResponse = vlm.describe_scene(
-                image_data=image_data,
-                detail_level=detail_level or 'medium'
-            )
+        async def generate() -> AsyncIterator[bytes]:
+            async for chunk in vlm.analyze_image_stream(image_data=image_data, prompt=prompt):
+                json_chunk = json.dumps(chunk.__dict__) + "\n"
+                yield json_chunk.encode("utf-8")
 
-
-        if not response.success:
-            return HTTPException(
-                status_code=500,
-                detail=response.error_message
-            )
-        
-        return JSONResponse(
-            status_code=200,
-            content={
-                "processing_time_ms": response.processing_time_ms,
-                "analysis_type": response.analysis_type.value,
-                # "detected_objects": response.detected_objects,
-                # "extracted_text": response.extracted_text,
-                "model_info": response.model_info,
-                "response_text":response.response_text,
-            }
-        )
+        return StreamingResponse(generate(), media_type="application/json")
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
