@@ -1,12 +1,11 @@
-
 import os
+import json
 import logging
 import numpy as np
 from tqdm import tqdm
 from pathlib import Path
-from typing import List, Union, Optional
+from typing import List
 from common_utils.indexing.types import ImageData
-from common_utils.embedding.perception_encoder.core import PerceptionEmbedding
 from common_utils.embedding import create as create_embedding
 from common_utils.indexing import create as create_index
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -68,8 +67,49 @@ class VisionAISearch:
             print(f"  - {name} | Similarity: {score:.4f}")
 
         return results
+    
 
+class VisionAISearchWithCaption(VisionAISearch):
+    def __init__(self, index_path: str= "faiss.index", model_name:str="perception", backend:str="faiss", path2caption: str=""):
+        super().__init__(index_path, model_name, backend)
+        self.id_map_path = f"{index_path}.ids.npy"
+        if not os.path.exists(path2caption):
+            raise FileNotFoundError(f"Caption file doesn't exist at path {path2caption}")
 
+        with open(path2caption) as f:
+            self.captions = json.load(f)
+
+    def build(self, images:List[ImageData]):
+        vectors = []
+        ids= []
+        logging.info("Building FAISS index from image captions...")
+
+        indices = len(images)
+        pbar = tqdm(range(indices), ncols=100)
+        for i in pbar:
+            img = images[i]
+            if img.id in self.asset_ids or img.file_path not in self.captions.keys():
+                continue
+            
+            caption = self.captions.get(img.file_path)
+            temp_vectors = []
+            for sentence in caption:
+                vector = self.embedder.extract_text_feature(sentence)
+                # temp_vectors.append(vector)
+            
+                # vectors.append(np.mean(temp_vectors, axis=1))
+                vectors.append(vector)
+                ids.append(img.id)
+        
+        # Todo: Multiple embeddings are created for one img, change that
+        if vectors:
+            matrix = np.vstack(vectors).astype(np.float32)
+            logging.info(matrix.shape)
+            self.index.add(matrix)
+            self.asset_ids.extend(ids)
+
+        logging.info(f"Indexed {len(ids)} images.")
+        
 if __name__ == "__main__":
     from glob import glob
     EMBEDDING_BACKEND = os.getenv("VISIONSEARCH_EMBEDDING_BACKEND", "clip")
