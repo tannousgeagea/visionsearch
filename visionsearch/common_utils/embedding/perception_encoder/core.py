@@ -1,11 +1,12 @@
+from PIL import Image
+
 import numpy as np
 import torch
 
-import common_utils.perception_models.core.vision_encoder.pe as p_encoder 
-import common_utils.perception_models.core.vision_encoder.transforms as transforms
-from PIL import Image
-
 from common_utils.embedding.base import BaseEmbedder
+from common_utils.perception_models.core.vision_encoder import pe as p_encoder
+from common_utils.perception_models.core.vision_encoder import transforms
+
 
 class PerceptionEmbedding(BaseEmbedder):
     def __init__(self):
@@ -34,6 +35,6 @@ class PerceptionEmbedding(BaseEmbedder):
             features = self.model.encode_image(image_tensor)
             features = features / features.norm(dim=-1, keepdim=True)
         return features.cpu().numpy()
-
+    
     def get_embed_dim(self):
         return self.model.output_dim
