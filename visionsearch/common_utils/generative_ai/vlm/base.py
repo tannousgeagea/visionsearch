@@ -107,6 +107,7 @@ class VLMConfig:
     rate_limit_per_minute: int = 60
     enable_streaming: bool = False
     enable_caching: bool = True
+    enable_json: bool = False
     custom_headers: Optional[Dict[str, str]] = None
 
 class VLMException(Exception):
@@ -431,6 +432,35 @@ class VLMBase(ABC):
         
         enhancement = enhancements.get(analysis_type, "")
         return enhancement + prompt
+    
+    def _enhance_prompt_for_json(self, prompt: str, kv_pair: dict, **kwargs) -> str:
+        """
+        Enhances a base prompt by generating JSON-like attribute instructions recursively from a nested dict.
+        """
+        obj = kwargs.get("obj", "object")
+
+        def format_attributes(d: dict, parent_key=""):
+            items = []
+            for k, v in d.items():
+                full_key = k
+                if isinstance(v, dict):
+                    items.extend(format_attributes(v, full_key))
+                else:
+                    example = f" (e.g., {v})" if isinstance(v, str) else ""
+                    items.append(f"'{full_key}': <{full_key}>{example}")
+            return items
+
+        if kv_pair:
+            attributes = format_attributes(kv_pair)
+            attribute_description = ", ".join(attributes)
+            enhancement = (
+                f"For each detected {obj}, provide the following information in JSON format: "
+                f"{{'object': {{{attribute_description}}}}}. "
+            )
+            return f"{prompt.strip()} {enhancement}"
+        else:
+            return prompt
+
 
     def get_supported_formats(self) -> List[ImageFormat]:
         """Get list of supported image formats"""
