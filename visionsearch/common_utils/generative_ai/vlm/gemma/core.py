@@ -7,7 +7,7 @@ import time
 from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
 import torch
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from transformers import AutoProcessor, Gemma3ForConditionalGeneration
 
 from common_utils.generative_ai.vlm.base import (
@@ -41,11 +41,12 @@ class GemmaVLM(VLMBase):
         self.system_prompt = system_prompt
 
     def _setup_client(self):
+        token = ""
         model_id = "google/gemma-3-4b-it"
         self.model = Gemma3ForConditionalGeneration.from_pretrained(
-            model_id, device_map="auto"
+            model_id, device_map="auto", token=token
         ).eval()
-        self.processor = AutoProcessor.from_pretrained(model_id)
+        self.processor = AutoProcessor.from_pretrained(model_id, token=token)
 
     
     def _extract_confidence_level(self, response_text: str) -> ConfidenceLevel:
@@ -96,11 +97,25 @@ class GemmaVLM(VLMBase):
         return text_items[:5]  # Limit to top 5 text items
     
     def _infer_from_model(self, prompt: str, image_data: Union[bytes, List[bytes]]):
+        pil_images = []
         try:
             if isinstance(image_data, bytes):
                 image_data = [image_data]
+            for img_bytes in image_data:
+                pil_image = Image.open(io.BytesIO(img_bytes))
+                pil_image.verify()  # Will raise error if the image is not complete or corrupt
 
-            pil_images = [Image.open(io.BytesIO(im_data)) for im_data in image_data]
+                # Reopen if needed after verify
+                pil_image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+                pil_images.append(pil_image)
+           
+        except UnidentifiedImageError:
+            raise VLMProcessingError(f"Cannot convert image into PIL Image, might be corrupted")
+        
+        except Exception as e:
+            raise VLMProcessingError(f"Unexpected error: {str(e)}")
+        
+        try:
             content = [
                         {"type": "image", "image": pil_image} for pil_image in pil_images
                     ]
@@ -212,14 +227,13 @@ class GemmaVLM(VLMBase):
             # Enhance prompt for multiple images
             if self.config.enable_json:
                prompt = self._enhance_prompt_for_json(prompt, kv_pair=kwargs.get("kv_pair"))
-               print(prompt)
             enhanced_prompt = f"""
             Analyze these {len(images)} images: {prompt}
             
             Please provide a comprehensive analysis comparing and contrasting the images.
             """
 
-            print(enhanced_prompt)
+            # print(enhanced_prompt)
             
             # Make the request
             response_text = self._infer_from_model(prompt=enhanced_prompt, image_data=images)
