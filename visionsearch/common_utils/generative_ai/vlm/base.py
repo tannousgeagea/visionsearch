@@ -433,33 +433,59 @@ class VLMBase(ABC):
         enhancement = enhancements.get(analysis_type, "")
         return enhancement + prompt
     
-    def _enhance_prompt_for_json(self, prompt: str, kv_pair: dict, **kwargs) -> str:
+    def _enhance_prompt_for_json(
+        self, 
+        prompt: str, 
+        json_obj_attributes: Union[List[str], Dict[str, str]], 
+        json_img_attributes: Union[List[str], Dict[str, str]]
+    ) -> str:
         """
-        Enhances a base prompt by generating JSON-like attribute instructions recursively from a nested dict.
+        Enhances a base prompt by appending a JSON-like structure based on given object- and image-level attributes.
+        
+        Parameters:
+            prompt (str): The base prompt to enhance.
+            json_obj_attributes (List[str] | Dict[str, str]): Attributes to include under the "object" key.
+            json_img_attributes (List[str] | Dict[str, str]): Attributes to include under the "image_attributes" key.
+
+        Returns:
+            str: Enhanced prompt with a JSON structure appended.
+        
+        Raises:
+            NotImplementedError: If nested lists are provided as attributes, which are not supported.
         """
-        obj = kwargs.get("obj", "object")
+        json_struct = {}
 
-        def format_attributes(d: dict, parent_key=""):
-            items = []
-            for k, v in d.items():
-                full_key = k
-                if isinstance(v, dict):
-                    items.extend(format_attributes(v, full_key))
-                else:
-                    example = f" (e.g., {v})" if isinstance(v, str) else ""
-                    items.append(f"'{full_key}': <{full_key}>{example}")
-            return items
+        # Handle object-level attributes
+        if json_obj_attributes:
+            json_struct["objects"] = [{"object": {}}]
 
-        if kv_pair:
-            attributes = format_attributes(kv_pair)
-            attribute_description = ", ".join(attributes)
-            enhancement = (
-                f"For each detected {obj}, provide the following information in JSON format: "
-                f"{{'object': {{{attribute_description}}}}}. "
-            )
-            return f"{prompt.strip()} {enhancement}"
-        else:
-            return prompt
+            if isinstance(json_obj_attributes, list):
+                if any(isinstance(item, list) for item in json_obj_attributes):
+                    raise NotImplementedError("Nested lists are not supported for object attributes.")
+                for attribute in json_obj_attributes:
+                    json_struct["objects"][0]["object"][attribute] = "<Placeholder>"
+
+            elif isinstance(json_obj_attributes, dict):
+                json_struct["objects"][0]["object"].update(json_obj_attributes)
+
+        # Handle image-level attributes
+        if json_img_attributes:
+            json_struct["image_attributes"] = {}
+
+            if isinstance(json_img_attributes, list):
+                if any(isinstance(item, list) for item in json_img_attributes):
+                    raise NotImplementedError("Nested lists are not supported for image attributes.")
+                for attribute in json_img_attributes:
+                    json_struct["image_attributes"][attribute] = "<Placeholder>"
+
+            elif isinstance(json_img_attributes, dict):
+                json_struct["image_attributes"].update(json_img_attributes)
+
+        # Return original prompt if no structure is added
+        if not json_struct:
+            return prompt.strip()
+
+        return f"{prompt.strip()} Generate a response as JSON given the structure: {json_struct}"
 
 
     def get_supported_formats(self) -> List[ImageFormat]:
