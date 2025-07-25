@@ -27,4 +27,4 @@ if __name__ == "__main__":
     objects = [["pipes", "mattresses", "furniture", "metal objects"]]
 
     # gemma_image_objects_pipeline.pipeline(vlm=vlm, imgs=imgs, image_data=image_data, objects=objects)
-    gemma_image_object_iterative_pipeline.pipeline(vlm=vlm, imgs=imgs, image_data=image_data, objects=objects)
+    gemma_image_object_iterative_pipeline.pipeline(vlm=vlm, imgs=imgs, image_data=image_data, objects=objects, path2json="/home/appuser/src/captions/single_image_obj_iterative.json")

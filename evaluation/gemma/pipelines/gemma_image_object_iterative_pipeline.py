@@ -4,7 +4,7 @@ import os
 
 from pipelines.prompt import *
 
-def pipeline(vlm, imgs, image_data, objects):
+def pipeline(vlm, imgs, image_data, objects, path2json):
     """
     SINGLE IMAGE PROMPT CAPTION SINGLE OBJ PER ITERATION
     """
@@ -83,7 +83,7 @@ def pipeline(vlm, imgs, image_data, objects):
         result_json[img_key]['inference_without_image'].update({"caption": response.response_text})
         result_json[img_key]['inference_without_image'].update({"processing_time": f"{time.time() - start_time:.2f}"})
 
-        with open("/home/appuser/src/captions/single_image_obj_iterative.json", "w") as f:
+        with open(path2json, "w") as f:
             json.dump(result_json, f, indent=4)
     
     return result_json
