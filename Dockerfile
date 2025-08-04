@@ -55,6 +55,8 @@ RUN pip3 install Pillow
 COPY ./visionsearch/common_utils/perception_models/requirements.txt /home/appuser/src/visionsearch/common_utils/perception_models/requirements.txt
 RUN pip3 install --no-cache-dir -r /home/appuser/src/visionsearch/common_utils/perception_models/requirements.txt
 
+# Gemini
+RUN pip3 install -q -U google-genai
 
 # upgrade everything
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get upgrade -q -y \

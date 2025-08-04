@@ -19,13 +19,13 @@ services:
     volumes:
       - .:/home/appuser/src
       - /home/wasteant/ws/Goda/TrainMLMedia:/media
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
     depends_on:
       - db
 
