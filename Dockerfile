@@ -58,6 +58,9 @@ RUN pip3 install --no-cache-dir -r /home/appuser/src/visionsearch/common_utils/p
 # Gemini
 RUN pip3 install -q -U google-genai
 
+# Tansformer cli
+RUN pip3 install -U "huggingface_hub[cli]"
+
 # upgrade everything
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get upgrade -q -y \
    && rm -rf /var/lib/apt/lists/*

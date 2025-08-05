@@ -6,7 +6,7 @@ import time
 
 imgs = [
         # "/home/appuser/src/archive/AGR_gate02_right_2025-05-28_08-52-53_1879cda1-72d9-49d1-af9a-c85c0c1419c4.jpg",
-        "/home/appuser/src/archive/AGR_gate01_left_2025-05-28_12-23-58_d50208f3-a0c8-47a8-8080-06f83ff7aadd.jpg",
+        "/media/appuser/rt_cvision/experiments/images/WasteAnt_gate01_top_2025_08_04_10_41_44_2c78eed3-3f86-4848-bfbb-cb84b2da1762.jpg",
         # "/home/appuser/src/archive/AGR_gate01_left_2025-05-27_08-20-08_00a3ab1a-4328-4a30-99c6-a53ce76752d4.jpg",
         # "/home/appuser/src/archive/AGR_gate01_left_2025-05-27_11-35-11_782ab537-adf5-469f-9d59-996aedd30878.jpg",
         # "/home/appuser/src/archive/AGR_gate01_left_2025-05-06_08-52-16_fedf3335-f615-4fc8-a35e-ab804941075f 3.jpg",
@@ -121,8 +121,10 @@ for obj in objects:
         for obj in response_dict:
             img_number = obj['object']['image_number']
             result_json.get(os.path.basename(imgs[img_number - 1])).append(obj)
-       
-        with open("/home/appuser/src/captions/caption4_.json", "w") as f:
-            json.dump(result_json, f, indent=4)
+
+
+        print(result_json)       
+        # with open("/home/appuser/src/captions/caption4_.json", "w") as f:
+        #     json.dump(result_json, f, indent=4)
     
 print(f"{time.time() - start_time}")
