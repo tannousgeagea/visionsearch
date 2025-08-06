@@ -18,14 +18,14 @@ services:
       - 9005:9005
     volumes:
       - .:/home/appuser/src
-      - /home/wasteant/ws/Goda/TrainMLMedia:/media
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+      - ${MEDIA_ROOT}:/media
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     depends_on:
       - db
 
