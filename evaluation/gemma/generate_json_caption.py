@@ -1,7 +1,4 @@
 from glob import glob
-import os
-
-import cv2
 
 import pipelines.gemma_image_objects_pipeline as gemma_image_objects_pipeline
 import pipelines.gemma_image_object_iterative_pipeline as gemma_image_object_iterative_pipeline
