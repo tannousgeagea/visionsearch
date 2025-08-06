@@ -12,7 +12,7 @@ def pipeline(vlm, imgs, image_data, objects, path2json):
     result_json = {}
     for x, image_bytes in enumerate(image_data):
         img_key = os.path.basename(imgs[x])
-        prompt = get_object_user_prompt(objects)
+        prompt = get_object_user_prompt(objects, mode="single")
         vlm.system_prompt = get_object_system_prompt(objects)
         vlm.config.enable_json = True
 

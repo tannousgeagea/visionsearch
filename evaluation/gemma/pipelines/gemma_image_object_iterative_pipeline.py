@@ -17,7 +17,7 @@ def pipeline(vlm, imgs, image_data, objects, path2json):
         start_time = int(time.time())
 
         for obj in objects:
-            prompt = get_object_user_prompt(obj)
+            prompt = get_object_user_prompt(obj, mode="single")
 
             
             vlm.system_prompt = get_object_system_prompt(obj)
