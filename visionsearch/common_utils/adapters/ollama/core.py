@@ -614,7 +614,7 @@ class OllamaAdapter:
 
 if __name__ == "__main__":
     # Initialize the adapter
-    adapter = OllamaAdapter()
+    adapter = OllamaAdapter(base_url="http://ollama:11434")
     
     # Check server availability
     if not adapter.is_server_available():
@@ -685,6 +685,14 @@ if __name__ == "__main__":
         )
         print(f"Creative response: {response['response']}")
         
+
+        # Multimodal with images
+        print("\n=== Image Analysis ===")
+        response = adapter.generate(model="gemma3:4b-it-qat", prompt="What's in this image?", 
+            images=["/media/WasteAnt_gate01_top_2025_08_04_10_41_44_2c78eed3-3f86-4848-bfbb-cb84b2da1762.jpg"], stream=False)
+
+        print(f"Image response: {response['response']}")
+
         print("\n=== All Examples Completed Successfully ===")
         
     except OllamaAPIError as e:
