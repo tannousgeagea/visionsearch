@@ -36,6 +36,11 @@ class ConfidenceLevel(Enum):
     MEDIUM = "medium"
     HIGH = "high"
 
+
+class ModelSource(Enum):
+    LOCAL = "local"
+    OLLAMA = "ollama"
+
 @dataclass
 class ImageInput:
     """Standardized image input format"""
@@ -125,6 +130,7 @@ class VLMConfig:
     """Configuration for VLM models"""
     api_key: str
     model_name: str
+    model_source: ModelSource
     endpoint: Optional[str] = None
     max_tokens: int = 4000
     temperature: float = 0.7
