@@ -51,6 +51,9 @@ RUN pip3 install faiss-cpu
 RUN pip3 install clip-anytorch
 RUN pip3 install Pillow
 
+#LLM/VLM Templating
+RUN pip3 install langchain
+
 # Perception Encoder PE
 COPY ./visionsearch/common_utils/perception_models/requirements.txt /home/appuser/src/visionsearch/common_utils/perception_models/requirements.txt
 RUN pip3 install --no-cache-dir -r /home/appuser/src/visionsearch/common_utils/perception_models/requirements.txt
