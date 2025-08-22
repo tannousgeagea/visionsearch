@@ -104,10 +104,11 @@ class StreamingVLMResponse:
 
 @dataclass
 class VideoAnalysisArguments:
+    analysis_type: AnalysisType
     video_format: VideoFormat
     target_seconds: int
     batch_per_frames: int
-    generate_report: bool
+    generate_report: bool = False
 
 @dataclass
 class VideoBatchResponse:
@@ -120,10 +121,10 @@ class VideoVLMResponse:
     success: bool
     responses_per_batch: List[VideoBatchResponse]
     video_meta_information: Optional[Dict[str, Any]] 
-    json_response: Optional[Dict[str, Any]] 
     errors: Optional[List[str]] 
     processing_time_ms: Optional[int] = None
     report: Optional[str] = None
+    json_response: Optional[Dict[str, Any]] = None
 
 @dataclass
 class VLMConfig:
