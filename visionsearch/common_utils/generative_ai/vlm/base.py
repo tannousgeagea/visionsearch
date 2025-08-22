@@ -16,6 +16,11 @@ class ImageFormat(Enum):
     GIF = "gif"
     BMP = "bmp"
 
+class VideoFormat(Enum):
+    MP4 = "mp4"
+    AVI = "avi"
+    MOV = "mov"
+
 class AnalysisType(Enum):
     GENERAL_DESCRIPTION = "general_description"
     OBJECT_DETECTION = "object_detection"
@@ -71,6 +76,7 @@ class VLMResponse:
     model_info: Optional[Dict[str, str | int]] = None
     error_message: Optional[str] = None
     raw_response: Optional[Dict[str, Any]] = None
+    json_response: Optional[Dict[str, Any]] = None
 
 @dataclass
 class BatchVLMResponse:
@@ -90,6 +96,29 @@ class StreamingVLMResponse:
     chunk_index: int
     total_chunks: Optional[int] = None
     metadata: Optional[Dict[str, Any]] = None
+
+@dataclass
+class VideoAnalysisArguments:
+    video_format: VideoFormat
+    target_seconds: int
+    batch_per_frames: int
+    generate_report: bool
+
+@dataclass
+class VideoBatchResponse:
+    response: VLMResponse
+    start_second: int
+    end_second: int
+
+@dataclass
+class VideoVLMResponse:
+    success: bool
+    responses_per_batch: List[VideoBatchResponse]
+    video_meta_information: Optional[Dict[str, Any]] 
+    json_response: Optional[Dict[str, Any]] 
+    errors: Optional[List[str]] 
+    processing_time_ms: Optional[int] = None
+    report: Optional[str] = None
 
 @dataclass
 class VLMConfig:
@@ -460,8 +489,13 @@ class VLMBase(ABC):
             json_struct["objects"] = [{"object": {}}]
 
             if isinstance(json_obj_attributes, list):
-                if any(isinstance(item, list) for item in json_obj_attributes):
-                    raise NotImplementedError("Nested lists are not supported for object attributes.")
+                if any(isinstance(item, list) for item in json_obj_attributes)or \
+                any(isinstance(item, dict) for item in json_obj_attributes) and isinstance(json_obj_attributes, list):
+                    raise NotImplementedError(
+                            "Nested lists or list of dictionaries are not supported for image attributes. "
+                            "Please provide a flat list of attribute names (e.g., ['image_caption', 'image_description']) "
+                            "or a single dictionary with key-value pairs (e.g., {'image_caption': 'caption text'})."
+                        )
                 for attribute in json_obj_attributes:
                     json_struct["objects"][0]["object"][attribute] = "<Placeholder>"
 
@@ -473,8 +507,16 @@ class VLMBase(ABC):
             json_struct["image_attributes"] = {}
 
             if isinstance(json_img_attributes, list):
-                if any(isinstance(item, list) for item in json_img_attributes):
-                    raise NotImplementedError("Nested lists are not supported for image attributes.")
+                if any(isinstance(item, list) for item in json_img_attributes) or \
+                any(isinstance(item, dict) for item in json_img_attributes) and isinstance(json_img_attributes, list):
+                    if isinstance(json_img_attributes, list) and any(isinstance(item, dict) for item in json_img_attributes):
+                        raise NotImplementedError(
+                            "Nested lists or list of dictionaries are not supported for image attributes. "
+                            "Please provide a flat list of attribute names (e.g., ['image_caption', 'image_description']) "
+                            "or a single dictionary with key-value pairs (e.g., {'image_caption': 'caption text'})."
+                        )
+
+                
                 for attribute in json_img_attributes:
                     json_struct["image_attributes"][attribute] = "<Placeholder>"
 
