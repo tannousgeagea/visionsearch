@@ -1,30 +1,37 @@
 import ast
-import asyncio
+import gc
 import io
 import logging
+import os
 import re
+import shutil
+import tempfile
 import time
 from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
+import cv2
 import torch
 from PIL import Image, UnidentifiedImageError
 from transformers import AutoProcessor, Gemma3ForConditionalGeneration
 
+from langchain.prompts import ChatPromptTemplate
+
+from common_utils.adapters.ollama import OllamaAdapter
 from common_utils.generative_ai.vlm.base import (
     AnalysisType,
     BatchVLMResponse,
     ConfidenceLevel,
-    DetectedObject,
     ExtractedText,
     ImageFormat,
-    ImageInput,
+    ModelSource,
     StreamingVLMResponse,
+    VideoAnalysisArguments,
+    VideoBatchResponse,
+    VideoFormat,
+    VideoVLMResponse,
     VLMBase,
     VLMConfig,
-    VLMConfigurationError,
-    VLMException,
     VLMProcessingError,
-    VLMRateLimitError,
     VLMResponse,
 )
 
@@ -33,7 +40,6 @@ class GemmaVLM(VLMBase):
     def __init__(self, config:VLMConfig, system_prompt):
         self.logger = logging.getLogger(__name__)
         
-        # Track rate limiting
         super().__init__(config)
         self._last_request_time = 0
         self._request_count = 0
@@ -41,13 +47,20 @@ class GemmaVLM(VLMBase):
         self.system_prompt = system_prompt
 
     def _setup_client(self):
-        token = ""
-        model_id = "google/gemma-3-4b-it"
-        self.model = Gemma3ForConditionalGeneration.from_pretrained(
-            model_id, device_map="auto", token=token
-        ).eval()
-        self.processor = AutoProcessor.from_pretrained(model_id, token=token)
+        if self.config.model_source == ModelSource.LOCAL:
+            token = os.getenv("HF_TOKEN")
+            model_id = "google/gemma-3-4b-it"
+            self.model = Gemma3ForConditionalGeneration.from_pretrained(
+                model_id, token=token
+            ).eval()
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            self.model.to(device)
+            self.processor = AutoProcessor.from_pretrained(model_id, token=token)
 
+        elif self.config.model_source == ModelSource.OLLAMA:
+            print("Hi")
+        print(f"Allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB")
+        print(f"Reserved: {torch.cuda.memory_reserved() / 1e9:.2f} GB")
     
     def _extract_confidence_level(self, response_text: str) -> ConfidenceLevel:
         """Extract confidence level from response text"""
@@ -134,31 +147,35 @@ class GemmaVLM(VLMBase):
                         
                 }
             ]
-
             inputs = self.processor.apply_chat_template(
                 messages, add_generation_prompt=True, tokenize=True,
                 return_dict=True, return_tensors="pt"
             ).to(self.model.device, dtype=torch.bfloat16)
 
             input_len = inputs["input_ids"].shape[-1]
-
             with torch.inference_mode():
                 generation = self.model.generate(**inputs, max_new_tokens=self.config.max_tokens, do_sample=False)
                 generation = generation[0][input_len:]
-
-            answer = self.processor.decode(generation, skip_special_tokens=True)    
+            answer = self.processor.decode(generation, skip_special_tokens=True)  
+           
             return answer
 
         except Exception as e:
             raise VLMProcessingError(f"Encountered error during inference: {e}")
 
     def analyze_image(self, image_data: bytes, prompt: str, 
-                     analysis_type: AnalysisType = AnalysisType.GENERAL_DESCRIPTION) -> VLMResponse:
+                     analysis_type: AnalysisType = AnalysisType.GENERAL_DESCRIPTION, **kwargs) -> VLMResponse:
         """Analyze a single image with the given prompt"""
         start_time = time.time()
         
         try:
-
+            if self.config.enable_json:
+               json_obj_attributes = kwargs.get("json_obj_attributes", [])
+               json_img_attributes = kwargs.get("json_img_attributes", [])
+               prompt = self._enhance_prompt_for_json(prompt, json_obj_attributes, json_img_attributes)
+            else: 
+                json_dict = {}
+            
             enhanced_prompt = self._enhance_prompt_for_analysis_type(prompt, analysis_type)
 
             response_text = self._infer_from_model(prompt=enhanced_prompt, image_data=image_data)
@@ -170,10 +187,10 @@ class GemmaVLM(VLMBase):
             
             if analysis_type == AnalysisType.TEXT_EXTRACTION:
                 extracted_text = self._extract_text_from_response(response_text)
-            
+            if self.config.enable_json:
+                json_dict = self._extract_json_from_response(response_text)
             processing_time = int((time.time() - start_time) * 1000)
             
-            print(f"Processing time {processing_time}")
             return VLMResponse(
                 success=True,
                 response_text=response_text,
@@ -181,7 +198,8 @@ class GemmaVLM(VLMBase):
                 analysis_type=analysis_type,
                 extracted_text=extracted_text,
                 processing_time_ms=processing_time,
-                model_info={"provider": "google", "model": self.config.model_name}
+                model_info={"provider": "google", "model": self.config.model_name},
+                raw_response=json_dict
             )
         except Exception as e:
             return VLMResponse(
@@ -226,15 +244,18 @@ class GemmaVLM(VLMBase):
         try:
             # Enhance prompt for multiple images
             if self.config.enable_json:
-               prompt = self._enhance_prompt_for_json(prompt, kv_pair=kwargs.get("kv_pair"))
+               json_obj_attributes = kwargs.get("json_obj_attributes", [])
+               json_img_attributes = kwargs.get("json_img_attributes", [])
+               prompt = self._enhance_prompt_for_json(prompt, json_obj_attributes, json_img_attributes)
+            else: 
+                json_dict = {}
+
             enhanced_prompt = f"""
             Analyze these {len(images)} images: {prompt}
             
             Please provide a comprehensive analysis comparing and contrasting the images.
             """
-
-            # print(enhanced_prompt)
-            
+            enhanced_prompt = prompt
             # Make the request
             response_text = self._infer_from_model(prompt=enhanced_prompt, image_data=images)
             if self.config.enable_json:
@@ -276,11 +297,13 @@ class GemmaVLM(VLMBase):
         start_time = time.time()
         try:
             if self.config.enable_json:
-                prompt = self._enhance_prompt_for_json(prompt, kv_pair=kwargs.get("kv_pair"))
-            
-
+                json_obj_attributes = kwargs.get("json_obj_attributes", [])
+                json_img_attributes = kwargs.get("json_img_attributes", [])
+                prompt = self._enhance_prompt_for_json(prompt, json_obj_attributes, json_img_attributes)
+            else: 
+                json_dict = {}
+                
             enhanced_prompt = reference_desription + prompt
-            print(enhanced_prompt) 
 
             image_data = [reference_image] + images
             response_text = self._infer_from_model(prompt=enhanced_prompt, image_data=image_data) 
@@ -312,7 +335,6 @@ class GemmaVLM(VLMBase):
                 error_message=str(e),
                 processing_time_ms=int((time.time() - start_time) * 1000)
             )
-
 
     def batch_analyze_images(self, images: List[bytes], prompts: List[str],
                             analysis_type: AnalysisType = AnalysisType.GENERAL_DESCRIPTION) -> BatchVLMResponse:
@@ -400,7 +422,144 @@ class GemmaVLM(VLMBase):
       
     async def analyze_image_stream(self, image_data: bytes, prompt: str) -> AsyncIterator[StreamingVLMResponse]:
        raise NotImplementedError(f"{self.__class__.__name__} class doesn't support image streams yet")
-            
+    
+    def analyze_video(
+            self, 
+            video_data: bytes,  
+            prompt: str, 
+            args: VideoAnalysisArguments
+        ):
+        start_time = time.time()
+        if isinstance(prompt, ChatPromptTemplate):
+            prompt_template = prompt
+            messages = prompt_template.format_prompt(input="None").to_messages()
+            self.system_prompt = messages[0].content
+            prompt = messages[1].content
+
+        try:
+            tmp_dir = "/tmp/gemma_video_analysis/"
+            os.makedirs(tmp_dir, exist_ok=True)
+            if args.video_format == VideoFormat.MP4:
+                suffix = ".mp4"
+            elif args.video_format == VideoFormat.AVI:
+                suffix = ".avi"
+            elif args.video_format == VideoFormat.MOV:
+                suffix = ".mov"
+            else:
+                raise VLMProcessingError(f"Video Format: {args.video_format} not supported for Gemma")
+        except Exception as e:
+            return VideoVLMResponse(
+                success=False,
+                response_per_frames=[],
+                processing_time_ms=0,
+                errors=[e]
+            )
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+                tmp_file.write(video_data)
+                tmp_path = tmp_file.name
+
+        cap = cv2.VideoCapture(tmp_path)
+        if not cap.isOpened():
+            raise VLMProcessingError("There is some error with the video")
+        
+        frames = []
+        last_response = None
+        video_batch_responses = []
+        errors = []
+
+        original_fps = int(cap.get(cv2.CAP_PROP_FPS)) or 30
+        if original_fps <= 0:
+            original_fps = 30
+
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        saved_count = 0
+        start_second = 0
+
+        # Calculate frame indices at given interval
+        interval = max(int(original_fps * args.target_seconds), 1)
+        frame_indices = list(range(0, total_frames, interval))
+
+        # Ensure last frame is included
+        if frame_indices[-1] != (total_frames - 1):
+            frame_indices.append(total_frames - 1)
+
+        for x in frame_indices:
+            if start_second == -1:
+                start_second = x / original_fps
+            cap.set(cv2.CAP_PROP_POS_FRAMES, x)
+            ret, frame = cap.read()
+            if not ret:
+                continue
+
+            # Save every 'frame_interval'-th frame
+            frame_filename = os.path.join(tmp_dir, f"frame_{saved_count:04d}.jpg")
+            cv2.imwrite(frame_filename, frame)
+            saved_count += 1
+            with open(frame_filename, "rb") as f:
+                frames.append(f.read())
+
+            # Generate prompt with previous analysis
+            if last_response:
+                messages = prompt_template.format_prompt(input=last_response).to_messages()
+                prompt = messages[1].content
+
+            # Generate prompt without previous analysis
+            else:
+                messages = prompt_template.format_prompt(input="not available").to_messages()
+                prompt = messages[1].content
+
+            # Analyze batch of frames
+            if len(frames) == args.batch_per_frames or x == total_frames - 1:
+                try:
+                    end_second = x / original_fps
+                    response = self.analyze_multiple_images(frames, prompt, args.analysis_type)
+                    batch_response = VideoBatchResponse(
+                        response=response.response_text,
+                        start_second=start_second,
+                        end_second=end_second
+                    )
+                    video_batch_responses.append(batch_response)
+
+                    start_second = -1
+
+                except Exception as e:
+                    errors.append(e)
+                finally:
+                    # Clear resources
+                    torch.cuda.empty_cache()
+                    torch.cuda.ipc_collect()
+                    gc.collect()
+
+                    frames = []
+        
+        cap.release()
+        os.remove(tmp_path)
+        shutil.rmtree(tmp_dir)
+
+        report = ""
+        if args.generate_report:
+            summaries = "\n".join([batch_response.response for batch_response in video_batch_responses])
+            self.system_prompt = "You're an AI Assistant processing video summaries from different timeframes for one delivery."
+            prompt = (
+                f"You are instructed to use the following {summaries} to generate an informative and concise report "
+                "summarizing what happened in the video. The report should highlight the most important events during the delivery."
+            )
+
+            report = self._infer_from_model(prompt=prompt, image_data=[])
+
+        return VideoVLMResponse(
+            success=True,
+            responses_per_batch=video_batch_responses,
+            processing_time_ms=int((time.time() - start_time) * 1000),
+            errors=errors,
+            video_meta_information={
+                "duration": total_frames / original_fps,
+                "fps": original_fps
+            },
+            report=report
+        )
+        
     def get_model_info(self) -> Dict[str, Any]:
         """Get information about the model"""
         return {
