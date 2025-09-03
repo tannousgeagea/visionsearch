@@ -16,6 +16,7 @@ Features:
 - All advanced parameters and options
 """
 
+import re
 import json
 import base64
 import requests
@@ -177,20 +178,17 @@ class OllamaAdapter:
             processed_images = []
             for img in images:
                 if isinstance(img, (str, Path)):
-                    if Path(img).exists():
-                        # Read from file and encode
-                        with open(img, "rb") as f:
-                            img_data = base64.b64encode(f.read()).decode('utf-8')
-                        processed_images.append(img_data)
-                    else:
-                        # Assume it's already base64 encoded
-                        processed_images.append(str(img))
+                    try:
+                        processed_images.append(self._process_image_input(img))
+                    except (FileNotFoundError, ValueError) as e:
+                        raise OllamaAPIError(f"Failed to process image: {e}")
 
         payload = {
             "model": model,
             "prompt": prompt,
             "stream": stream
         }
+
 
         # Add optional parameters
         if suffix:
@@ -568,6 +566,43 @@ class OllamaAdapter:
         """Unload a model from memory using chat endpoint"""
         return self.chat(model=model, messages=[], keep_alive="0", stream=False)
 
+    def _is_base64_string(self, s: str) -> bool:
+        """Intelligently detect if string is base64 or file path"""
+        # Quick file path indicators
+        if len(s) < 50:  # Too short for base64 image
+            return False
+        
+        # Check for file extensions in reasonable length strings
+        if len(s) < 500:
+            path = Path(s)
+            if path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']:
+                return False
+        
+        # Validate base64 pattern
+        return re.match(r'^[A-Za-z0-9+/]*={0,2}$', s) is not None
+
+    def _process_image_input(self, img: Union[str, Path]) -> str:
+        """Safely process image input without filesystem errors"""
+        img_str = str(img)
+        
+        # Check if base64 first (avoids filesystem calls)
+        if self._is_base64_string(img_str):
+            return img_str  # Already encoded
+        
+        # Only then try file operations
+        try:
+            img_path = Path(img_str)
+            if img_path.exists() and img_path.is_file():
+                with open(img_path, "rb") as f:
+                    return base64.b64encode(f.read()).decode('utf-8')
+            else:
+                raise FileNotFoundError(f"File not found: {img_str}")
+        except (OSError, ValueError) as e:
+            # Fallback: if long string, assume malformed base64
+            if len(img_str) > 100:
+                return img_str
+            raise ValueError(f"Invalid image input: {e}")
+
     def encode_image_from_path(self, image_path: Union[str, Path]) -> str:
         """
         Encode an image file to base64
@@ -689,7 +724,7 @@ if __name__ == "__main__":
         # Multimodal with images
         print("\n=== Image Analysis ===")
         response = adapter.generate(model="gemma3:4b-it-qat", prompt="What's in this image?", 
-            images=["/media/WasteAnt_gate01_top_2025_08_04_10_41_44_2c78eed3-3f86-4848-bfbb-cb84b2da1762.jpg"], stream=False)
+            images=["/media/images/agr/AGR_gate01_left_2025-05-06_08-52-16_fedf3335-f615-4fc8-a35e-ab804941075f.jpg"], stream=False)
 
         print(f"Image response: {response['response']}")
 
