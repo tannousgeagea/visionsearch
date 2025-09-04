@@ -340,7 +340,7 @@ async def health_check():
 # GENERATION ENDPOINTS
 # ===================
 
-@router.post("/api/generate")
+@router.post("/generate")
 async def generate_text(
     request: GenerateRequest,
     _: bool = Depends(verify_token)
@@ -376,7 +376,7 @@ async def generate_text(
         handle_ollama_error(e)
 
 
-@router.post("/api/generate/upload")
+@router.post("/generate/upload")
 async def generate_with_images(
     model: str,
     prompt: str,
@@ -424,7 +424,7 @@ async def generate_with_images(
         handle_ollama_error(e)
 
 
-@router.post("/api/chat")
+@router.post("/chat")
 async def chat_completion(
     request: ChatRequest,
     _: bool = Depends(verify_token)
@@ -461,7 +461,7 @@ async def chat_completion(
 # MODEL MANAGEMENT
 # ===================
 
-@router.get("/api/models")
+@router.get("/models")
 async def list_models(_: bool = Depends(verify_token)):
     """List available models"""
     try:
@@ -470,7 +470,7 @@ async def list_models(_: bool = Depends(verify_token)):
         handle_ollama_error(e)
 
 
-@router.get("/api/models/running")
+@router.get("/models/running")
 async def list_running_models(_: bool = Depends(verify_token)):
     """List currently running models"""
     try:
@@ -479,7 +479,7 @@ async def list_running_models(_: bool = Depends(verify_token)):
         handle_ollama_error(e)
 
 
-@router.post("/api/models/show")
+@router.post("/models/show")
 async def show_model(
     model: str,
     verbose: bool = False,
@@ -492,7 +492,7 @@ async def show_model(
         handle_ollama_error(e)
 
 
-@router.post("/api/models/create")
+@router.post("/models/create")
 async def create_model(
     request: CreateModelRequest,
     _: bool = Depends(verify_token)
@@ -519,7 +519,7 @@ async def create_model(
         handle_ollama_error(e)
 
 
-@router.post("/api/models/copy")
+@router.post("/models/copy")
 async def copy_model(
     request: CopyModelRequest,
     _: bool = Depends(verify_token)
@@ -532,7 +532,7 @@ async def copy_model(
         handle_ollama_error(e)
 
 
-@router.delete("/api/models/{model_name}")
+@router.delete("/models/{model_name}")
 async def delete_model(
     model_name: str,
     _: bool = Depends(verify_token)
@@ -545,7 +545,7 @@ async def delete_model(
         handle_ollama_error(e)
 
 
-@router.post("/api/models/pull")
+@router.post("/models/pull")
 async def pull_model(
     request: PullModelRequest,
     _: bool = Depends(verify_token)
@@ -570,7 +570,7 @@ async def pull_model(
         handle_ollama_error(e)
 
 
-@router.post("/api/models/push")
+@router.post("/models/push")
 async def push_model(
     request: PushModelRequest,
     _: bool = Depends(verify_token)
@@ -599,7 +599,7 @@ async def push_model(
 # EMBEDDING ENDPOINTS
 # ===================
 
-@router.post("/api/embeddings")
+@router.post("/embeddings")
 async def generate_embeddings(
     request: EmbeddingRequest,
     _: bool = Depends(verify_token)
@@ -623,7 +623,7 @@ async def generate_embeddings(
 # UTILITY ENDPOINTS
 # ===================
 
-@router.post("/api/models/load")
+@router.post("/models/load")
 async def load_model(
     model: str,
     _: bool = Depends(verify_token)
@@ -636,7 +636,7 @@ async def load_model(
         handle_ollama_error(e)
 
 
-@router.post("/api/models/unload")
+@router.post("/models/unload")
 async def unload_model(
     model: str,
     _: bool = Depends(verify_token)
@@ -653,7 +653,7 @@ async def unload_model(
 # INFORMATION ENDPOINTS
 # ===================
 
-@router.get("/api/info")
+@router.get("/info")
 async def get_api_info():
     """Get API information"""
     return {
